@@ -11,3 +11,5 @@ Untuk awalan, anda bisa membuat turnamen percobaan dengan memilih opsi `5` ketik
 # Installation
 
 Program ini ditulis dalam bahasa GO, jadi usahakan anda men-[download](https://go.dev/dl/) program go terlebih dahulu sebelum menjalankan program ini.
+
+🛠Application Version: v1.0.0

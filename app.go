@@ -411,6 +411,7 @@ func updateGroupMatch(idx, indexGroup int) {
 			updateGroupMatch(idx, indexGroup)
 		} else {
 			updateGroupMatchPoints(idx, indexGroup, teamAId, teamBId)
+			clearTerminal()
 			updateGroup(idx)
 		}
 	}
@@ -496,46 +497,43 @@ func updatePlayOff(idx int) {
 }
 
 func updateSpecificTournament(idx int) {
-	var i int
-	var isContinue bool
-	var text, pick string
+	var pick int
+	var text string
 
-	Print("Apa yang hendak anda perbarui di "+tournaments[idx].name+"?", true)
-	switch tournaments[idx].system {
-	case 1:
-		Print("1). Klasemen", true)
-	case 2:
-		Print("1). Group", true)
+	text = "Saat ini anda berada pada tahap "
+	if tournaments[idx].finishGroup {
+		text += "PlayOff. "
+	} else {
+		switch tournaments[idx].system {
+		case 1:
+			text += "Klasemen. "
+		case 2:
+			text += "Group. "
+		}
 	}
-	Print("2). Playoff", true)
-	Print("Pilihlah (ketik 'cancel' untuk kembali ke pilihan turnamen): ", false)
+
+	text += "Pilihlah salah-satu dari 3 pilihan ini"
+	Print(text, true)
+
+	if tournaments[idx].finishGroup {
+		Print("1). Melanjutkan pembaruan pada babak playoff", true)
+	} else {
+		Print("1). Melanjutkan pembaruan pada babak grup", true)
+	}
+	Print("2). Kembali", true)
+	Print("Pilih antara 2 opsi tersebut: ", false)
 	fmt.Scan(&pick)
 
-	switch strings.ToLower(pick) {
-	case "1", "2":
-		isContinue = true
-		for i = 0; i < tournaments[idx].nStandings; i++ {
-			if len(text) == 0 {
-				text += "Grup-grup yang belum menyelesaikan pertandingan: "
-			}
-			if pick == "2" && (tournaments[idx].standings[i].jumlahPertandingan < combination(tournaments[idx].standings[i].nTeams, 2)) {
-				text += fmt.Sprint(i+1, " ")
-				isContinue = false
-			}
+	switch pick {
+	case 1:
+		clearTerminal()
+		switch tournaments[idx].finishGroup {
+		case true:
+			updatePlayOff(idx)
+		case false:
+			updateGroup(idx)
 		}
-		if !isContinue {
-			Print(text, true)
-			updateSpecificTournament(idx)
-		} else {
-			switch pick {
-			case "1":
-				updateGroup(idx)
-			case "2":
-				updatePlayOff(idx)
-			}
-			updateSpecificTournament(idx)
-		}
-	case "cancel":
+	case 2:
 		Print("-----------------------------------------------", true)
 		clearTerminal()
 	default:
@@ -558,11 +556,18 @@ func updateTournament() {
 			Print("Anda memasukkan ID yang tidak ada di dalam database!", true)
 			updateTournament()
 		} else {
-			updateSpecificTournament(idx)
-			Print("-----------------------------------------------", true)
+			if tournaments[idx].finishPlayOff {
+				clearTerminal()
+				Print("Turnamen "+tournaments[idx].name+" telah selesai diselenggarakan! Anda tidak bisa merubahnya.", true)
+				updateTournament()
+			} else {
+				clearTerminal()
+				updateSpecificTournament(idx)
+				Print("-----------------------------------------------", true)
 
-			clearTerminal()
-			updateTournament()
+				clearTerminal()
+				updateTournament()
+			}
 		}
 	} else {
 		clearTerminal()
@@ -674,9 +679,9 @@ func viewTournament() {
 	fmt.Scan(&id)
 
 	if strings.ToLower(id) != "cancel" {
+		clearTerminal()
 		idx = searchTournamentIndex(id)
 		if idx < 0 {
-			clearTerminal()
 			Print("Turnamen dengan ID '"+id+"' tidak ditemukan!", true)
 			viewTournament()
 		} else {
@@ -761,6 +766,12 @@ func deleteTournament() {
 	Print("-----------------------------------------------", true)
 	clearTerminal()
 	main()
+}
+
+// Opsi 4
+
+func guideTournament() {
+
 }
 
 // Opsi 5
@@ -1036,6 +1047,8 @@ func main() {
 		viewTournament()
 	case 3:
 		deleteTournament()
+	case 4:
+		guideTournament()
 	case 5:
 		createTournament()
 	}
