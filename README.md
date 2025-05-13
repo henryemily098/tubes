@@ -7,3 +7,7 @@ Ini adalah sebuah program simulasi turnamen berbasis Valorant yang di mana anda 
 # GUIDE
 
 Untuk awalan, anda bisa membuat turnamen percobaan dengan memilih opsi `5` ketika program dijalankan dan masukan `default` untuk membuat turnamen secara otomatis. Sistem akan secara otomatis membuatkan anda turnamen template yang berasal dari turnamen VCT sesungguhnya (source: [Valorant Champions Tour 2025: Pacific Stage 1](https://www.vlr.gg/event/2379/champions-tour-2025-pacific-stage-1))
+
+# Installation
+
+Program ini ditulis dalam bahasa GO, jadi usahakan anda men-[download](https://go.dev/dl/) program go terlebih dahulu sebelum menjalankan program ini.
