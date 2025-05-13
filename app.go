@@ -52,7 +52,7 @@ type PlayOff struct {
 }
 
 type Tournament struct {
-	id, name                     string
+	id, name, champion_id        string
 	system, nPlayOff, nStandings int
 	standings                    [4]StandingTournament
 	playOff                      [12]PlayOff
@@ -187,16 +187,23 @@ func showTournamentTableList() {
 
 func showTournamentStandings(tournament Tournament, i int) {
 	var teams [16]StatisticTeam
-	var j, idx int
+	var j, idx, nQualified int
 
 	fmt.Println("+----------------------+--------------------------------+----------------------+----------------------+")
 	fmt.Printf("│ %-20s │ %-30s │ %-20s │ %-20s │\n", "ID", "Nama Tim", "Winner - Lose", "Status Qualified")
 	fmt.Println("+----------------------+--------------------------------+----------------------+----------------------+")
 	teams = sortTournamentTeamsBasedStatistics(tournament.standings[i].statisticTeams, tournament.standings[i].nTeams)
 
+	switch tournament.system {
+	case 1:
+		nQualified = tournament.nPlayOff
+	case 2:
+		nQualified = tournament.nPlayOff / tournament.nStandings
+	}
+
 	for j = 0; j < tournament.standings[i].nTeams; j++ {
 		idx = findTournamentTeamsIndex(tournament, i, teams[j].id)
-		if j+1 > tournament.standings[i].nTeams-2 {
+		if j+1 > nQualified {
 			fmt.Printf(
 				"│ %-20s │ %-30s │ %-20s │ %-20s │\n",
 				teams[j].id,
@@ -493,7 +500,35 @@ func updateGroup(idx int) {
 }
 
 func updatePlayOff(idx int) {
+	var teams [16]StatisticTeam
+	var teamIdx int
+	var i, j int
 
+	for i = 0; i < tournaments[idx].nStandings; i++ {
+		teams = sortTournamentTeamsBasedStatistics(
+			tournaments[idx].standings[i].statisticTeams,
+			tournaments[idx].standings[i].nTeams,
+		)
+		fmt.Println("Daftar tim yang lolos playoff di Grup", i+1)
+		fmt.Println("+-------+--------------------------------+--------------+")
+		fmt.Printf(
+			"│ %-5d │ %-30s │ %-12s │\n",
+			"No.",
+			"Nam Tim",
+			"Menang - Kalah",
+		)
+		fmt.Println("+-------+--------------------------------+--------------+")
+		for j = 0; j < (tournaments[idx].nPlayOff / 2); j++ {
+			teamIdx = findTournamentTeamsIndex(tournaments[idx], i, teams[j].id)
+			fmt.Printf(
+				"│ %-5d │ %-30s │ %-12s │\n",
+				j+1,
+				tournaments[idx].standings[i].teams[teamIdx].name,
+				fmt.Sprintf("%d - %d", teams[j].winner, teams[j].lose),
+			)
+		}
+		fmt.Println("+-------+--------------------------------+--------------+")
+	}
 }
 
 func updateSpecificTournament(idx int) {
@@ -813,13 +848,13 @@ func createTournamentGroupsTeams() {
 	Print("Jumlah tim per-grup akan menentukan jumlah tim yang akan lolos playoff, ini adalah sistemnya:", true)
 	switch tournaments[nTournaments].nStandings {
 	case 2:
-		Print("▫ 8 tim per-grup (total 16 tim), terdapat 12 tim (6 tim per-grup) yang lolos ke playoff, akan ada 1 yang lolos ke final tanpa melewati semifinal", true)
-		Print("▫ 6 tim per-grup (total 12 tim), terdapat 8 tim (4 tim per-grup) yang lolos ke playoff", true)
-		Print("▫ 4 tim per-grup (total 8 tim), terdapat 4 tim (2 tim per-grup) yang lolos ke playoff", true)
+		Print("▫ 8 tim per-grup (total 16 tim), terdapat 6 tim per-grup (total 12 tim) yang lolos ke playoff, akan ada 1 yang lolos ke final tanpa melewati semifinal", true)
+		Print("▫ 6 tim per-grup (total 12 tim), terdapat 4 tim per-grup (total 8 tim) yang lolos ke playoff", true)
+		Print("▫ 4 tim per-grup (total 8 tim), terdapat 2 tim per-grup (total 4 tim) yang lolos ke playoff", true)
 	case 4:
-		Print("▫ 4 tim per-grup (total 16 tim), terdapat 8 tim (2 tim per-grup) yang lolos ke playoff", true)
-		Print("▫ 3 tim per-grup (total 12 tim), terdapat 6 tim (2 tim per-grup) yang lolos ke playoff, akan ada 1 yang lolos ke final tanpa melewati semifinal", true)
-		Print("▫ 2 tim per-grup (total 8 tim), terdapat 4 tim (1 tim per-grup) yang lolos ke playoff", true)
+		Print("▫ 4 tim per-grup (total 16 tim), terdapat 2 tim per-grup (total 8 tim) yang lolos ke playoff", true)
+		Print("▫ 3 tim per-grup (total 12 tim), terdapat 2 tim per-grup (total 6 tim) yang lolos ke playoff, akan ada 1 yang lolos ke final tanpa melewati semifinal", true)
+		Print("▫ 2 tim per-grup (total 8 tim), terdapat 1 tim per-grup (total 4 tim) yang lolos ke playoff", true)
 	}
 	Print("Masukan jumlah tim yang akan bertanding (minimal 8, maksimal 16, dan harus kelipatan 4): ", false)
 	fmt.Scan(&totalTeams)
@@ -836,21 +871,9 @@ func createTournamentGroupsTeams() {
 
 	switch tournaments[nTournaments].nStandings {
 	case 2:
-		if totalTeams == 8 {
-			tournaments[nTournaments].nPlayOff = 4
-		} else if totalTeams == 12 {
-			tournaments[nTournaments].nPlayOff = 8
-		} else if totalTeams == 16 {
-			tournaments[nTournaments].nPlayOff = 12
-		}
+		tournaments[nTournaments].nPlayOff = totalTeams - 4
 	case 4:
-		if totalTeams == 8 {
-			tournaments[nTournaments].nPlayOff = 1
-		} else if totalTeams == 12 {
-			tournaments[nTournaments].nPlayOff = 2
-		} else if totalTeams == 16 {
-			tournaments[nTournaments].nPlayOff = 2
-		}
+		tournaments[nTournaments].nPlayOff = totalTeams / 2
 	}
 }
 
@@ -867,6 +890,7 @@ func createTournamentTeams() {
 		}
 
 		tournaments[nTournaments].nStandings = 1
+		tournaments[nTournaments].nPlayOff = tournaments[nTournaments].standings[0].nTeams / 2
 	case 2:
 		createTournamentGroups()
 		createTournamentGroupsTeams()
