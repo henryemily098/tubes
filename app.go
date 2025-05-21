@@ -380,8 +380,13 @@ func pickMatch(idx int, pick *int, mc *tabMatches) {
 		}
 
 		if index >= 0 && ((matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[index].id) || (matches[i].tHomeId == teams[index].id && matches[i].tAwayId == teams[idx].id)) {
-			fmt.Printf("1). %s (%d) vs (%d) %s - ", teams[idx].name, matches[i].pHome, matches[i].pAway, teams[index].name)
-			fmt.Printf("%d/%d/%d", matches[i].date, matches[i].month, matches[i].year)
+			fmt.Printf("1). %s ", teams[idx].name)
+			if teams[idx].id == matches[i].tHomeId {
+				fmt.Printf("(%d) vs (%d) ", matches[i].pHome, matches[i].pAway)
+			} else if teams[idx].id == matches[i].tAwayId {
+				fmt.Printf("(%d) vs (%d) ", matches[i].pAway, matches[i].pHome)
+			}
+			fmt.Printf("%s - %d/%d/%d", teams[index].name, matches[i].date, matches[i].month, matches[i].year)
 			if matches[i].pHome == matches[i].pAway {
 				fmt.Print(" (Belum)\n")
 			} else {
@@ -403,22 +408,6 @@ func pickMatch(idx int, pick *int, mc *tabMatches) {
 		Print("Anda memilih pertandingan yang tidak valid!", true)
 		fmt.Println()
 		pickMatch(idx, pick, mc)
-	}
-}
-
-func pickMethod(idx int, pick *int) {
-	Print("Apa yang hendak perbarui:", true)
-	Print("1). Skor", true)
-	Print("2). Tanggal pertandingan", true)
-	Print("3). KDA pemain", true)
-	Print("4). Kembali", true)
-	Print("Pilih: ", false)
-	fmt.Scan(pick)
-
-	if *pick < 1 || *pick > 4 {
-		clearTerminal()
-		Print("Pilihan anda tidak valid!", true)
-		pickMethod(idx, pick)
 	}
 }
 
@@ -451,7 +440,27 @@ func updateMatchScore(idx int, match Match) {
 		return
 	}
 
+	if matches[indexMatch].pHome != 0 || matches[indexMatch].pAway != 0 {
+		if matches[indexMatch].pHome == 2 {
+			if teams[idx].id == matches[indexMatch].tHomeId {
+				teams[idx].win--
+				teams[index].lose--
+			} else {
+				teams[idx].lose--
+				teams[index].win--
+			}
+		} else {
+			if teams[idx].id == matches[indexMatch].tHomeId {
+				teams[idx].lose--
+				teams[index].win--
+			} else {
+				teams[idx].win--
+				teams[index].lose--
+			}
+		}
+	}
 	if score < 2 {
+		clearTerminal()
 		if teams[idx].id == matches[indexMatch].tHomeId {
 			matches[indexMatch].pHome = score
 			matches[indexMatch].pAway = 2
@@ -460,7 +469,234 @@ func updateMatchScore(idx int, match Match) {
 			matches[indexMatch].pHome = 2
 		}
 	} else {
+		if teams[idx].id == matches[indexMatch].tHomeId {
+			matches[indexMatch].pHome = score
+		} else if teams[idx].id == matches[indexMatch].tAwayId {
+			matches[indexMatch].pAway = score
+		}
+		Print(fmt.Sprintf("Tentukan skor untuk %s (Range skor 0 - 1): ", teams[index].name), false)
+		fmt.Scan(&score)
 
+		clearTerminal()
+		if score < 0 || score > 1 {
+			Print("Skor yang kamu masukkan tidak valid!", true)
+			updateMatchScore(idx, match)
+			return
+		}
+
+		if teams[index].id == matches[indexMatch].tHomeId {
+			matches[indexMatch].pHome = score
+		} else if teams[index].id == matches[indexMatch].tAwayId {
+			matches[indexMatch].pAway = score
+		}
+	}
+
+	if matches[indexMatch].pHome > matches[indexMatch].pAway {
+		if teams[idx].id == matches[indexMatch].tHomeId {
+			teams[idx].win++
+			teams[index].lose++
+		} else if teams[index].id == matches[indexMatch].tHomeId {
+			teams[index].win++
+			teams[idx].lose++
+		}
+	} else if matches[indexMatch].pHome < matches[indexMatch].pAway {
+		if teams[idx].id == matches[indexMatch].tAwayId {
+			teams[idx].win++
+			teams[index].lose++
+		} else if teams[index].id == matches[indexMatch].tAwayId {
+			teams[index].win++
+			teams[idx].lose++
+		}
+	}
+}
+
+func updateMatchDate(idx int, match Match) {
+	var i, indexMatch, indexOpponent int
+	var month, date, year int
+	var months [12]string
+	var isAlready bool
+
+	months = [12]string{"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+	for i = 0; i < nMatches; i++ {
+		if match.tHomeId == matches[i].tHomeId && match.tAwayId == matches[i].tAwayId && match.date == matches[i].date && match.month == matches[i].month && match.year == matches[i].year {
+			indexMatch = i
+		}
+	}
+	switch teams[idx].id {
+	case match.tHomeId:
+		indexOpponent = getIndexTeamFromId(match.tAwayId)
+	case match.tAwayId:
+		indexOpponent = getIndexTeamFromId(match.tHomeId)
+	}
+
+	Print("Masukkan tanggal pertandingan (format: bulan tanggal tahun): ", false)
+	fmt.Scan(&month, &date, &year)
+
+	clearTerminal()
+	if month < 1 || month > 12 {
+		Print("Anda memasukkan bulan yang tidak valid!", true)
+		updateMatchDate(idx, match)
+		return
+	}
+
+	switch month {
+	case 1, 3, 5, 7, 8, 10, 12:
+		if date < 1 || date > 31 {
+			Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 31 untuk bulan %s!", months[month-1]), true)
+			updateMatchDate(idx, match)
+			return
+		}
+	case 4, 6, 9, 11:
+		if date < 1 || date > 30 {
+			Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 30 untuk bulan %s!", months[month-1]), true)
+			updateMatchDate(idx, match)
+			return
+		}
+	case 2:
+		if date < 1 || ((date > 28 && year%4 != 0) || (date > 29 && year%4 == 0)) {
+			if year%4 == 0 {
+				Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 29 untuk bulan %s!", months[month-1]), true)
+			} else {
+				Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 28 untuk bulan %s!", months[month-1]), true)
+			}
+			updateMatchDate(idx, match)
+			return
+		}
+	}
+
+	isAlready = false
+	for i = 0; i < nMatches && !isAlready; i++ {
+		if ((matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[indexOpponent].id) || (matches[i].tHomeId == teams[indexOpponent].id && matches[i].tAwayId == teams[idx].id)) && matches[i].month == month && matches[i].date == date && matches[i].year == year {
+			isAlready = true
+		}
+	}
+
+	if isAlready {
+		Print(
+			fmt.Sprintf(
+				"Sudah terdapat sebuah pertandingan pada tanggal %d %s %d untuk tim %s dan %s!",
+				date,
+				months[month],
+				year,
+				teams[idx].name,
+				teams[indexOpponent].name,
+			),
+			true,
+		)
+		updateMatchDate(idx, match)
+		return
+	}
+
+	matches[indexMatch].date = date
+	matches[indexMatch].month = month
+	matches[indexMatch].year = year
+}
+
+func updateMatchKDA(idx int, match Match) {
+	var i int
+	var indexMatch, indexOpponent int
+	var kill, death, assist int
+	var pick, pickIndex int
+
+	indexMatch = -1
+	for i = 0; i < nMatches && indexMatch < 0; i++ {
+		if match.tHomeId == matches[i].tHomeId && match.tAwayId == matches[i].tAwayId && match.date == matches[i].date && match.month == matches[i].month && match.year == matches[i].year {
+			indexMatch = i
+		}
+	}
+
+	Print("KDA (Kill, Death ,Assist) pemain-pemain dari tim mana yang hendak ada perbarui?", true)
+	if teams[idx].id == match.tHomeId {
+		indexOpponent = getIndexTeamFromId(match.tAwayId)
+		Print("1). "+teams[idx].name, true)
+		Print("2). "+teams[indexOpponent].name, true)
+	}
+	if teams[idx].id == match.tAwayId {
+		indexOpponent = getIndexTeamFromId(match.tHomeId)
+		Print("1). "+teams[indexOpponent].name, true)
+		Print("2). "+teams[idx].name, true)
+	}
+	Print("Pilih (ketik '0' jika membatalkan proses): ", false)
+	fmt.Scan(&pick)
+
+	clearTerminal()
+	if pick < 0 || pick > 2 {
+		Print("Anda memasukkan angka yang tidak valid!", true)
+		updateMatchKDA(idx, match)
+		return
+	}
+
+	switch pick {
+	case 1:
+		Print("Ubahlah KDA pemain ", false)
+		if teams[idx].id == match.tHomeId {
+			fmt.Print(teams[idx].name, " (format: kill death assist)!\n")
+			pickIndex = idx
+		} else {
+			fmt.Print(teams[indexOpponent].name, " (format: kill death assist)!\n")
+			pickIndex = indexOpponent
+		}
+		for i = 0; i < 5; i++ {
+			teams[pickIndex].members[i].totalKill -= match.mHomeStats[i].kill
+			teams[pickIndex].members[i].totalDeath -= match.mHomeStats[i].death
+			teams[pickIndex].members[i].totalAssist -= match.mHomeStats[i].assist
+
+			Print(fmt.Sprintf("%s: ", teams[pickIndex].members[i].name), false)
+			fmt.Scan(&kill, &death, &assist)
+
+			matches[indexMatch].mAwayStats[i].kill = kill
+			matches[indexMatch].mAwayStats[i].death = death
+			matches[indexMatch].mAwayStats[i].assist = assist
+
+			teams[pickIndex].members[i].totalKill += kill
+			teams[pickIndex].members[i].totalDeath += death
+			teams[pickIndex].members[i].totalAssist += assist
+		}
+	case 2:
+		Print("Ubahlah KDA pemain ", false)
+		if teams[idx].id == match.tAwayId {
+			fmt.Print(teams[idx].name, " (format: kill death assist)!\n")
+			pickIndex = idx
+		} else {
+			fmt.Print(teams[indexOpponent].name, " (format: kill death assist)!\n")
+			pickIndex = indexOpponent
+		}
+		for i = 0; i < 5; i++ {
+			teams[pickIndex].members[i].totalKill -= match.mAwayStats[i].kill
+			teams[pickIndex].members[i].totalDeath -= match.mAwayStats[i].death
+			teams[pickIndex].members[i].totalAssist -= match.mAwayStats[i].assist
+
+			Print(fmt.Sprintf("%s: ", teams[pickIndex].members[i].name), false)
+			fmt.Scan(&kill, &death, &assist)
+
+			matches[indexMatch].mAwayStats[i].kill = kill
+			matches[indexMatch].mAwayStats[i].death = death
+			matches[indexMatch].mAwayStats[i].assist = assist
+
+			teams[pickIndex].members[i].totalKill += kill
+			teams[pickIndex].members[i].totalDeath += death
+			teams[pickIndex].members[i].totalAssist += assist
+		}
+	}
+
+	if pick != 0 {
+		updateMatchKDA(idx, match)
+	}
+}
+
+func pickMethod(idx int, pick *int) {
+	Print("Apa yang hendak perbarui:", true)
+	Print("1). Skor", true)
+	Print("2). Tanggal pertandingan", true)
+	Print("3). KDA pemain", true)
+	Print("4). Kembali", true)
+	Print("Pilih: ", false)
+	fmt.Scan(pick)
+
+	if *pick < 1 || *pick > 4 {
+		clearTerminal()
+		Print("Pilihan anda tidak valid!", true)
+		pickMethod(idx, pick)
 	}
 }
 
@@ -475,6 +711,7 @@ func updateMatch(idx int) {
 	}
 
 	pickMethod(idx, &pick)
+	clearTerminal()
 	if pick == 4 {
 		updateMatch(idx)
 		return
@@ -482,7 +719,15 @@ func updateMatch(idx int) {
 
 	switch pick {
 	case 1:
-		updateMatchScore(idx, mc[indexMatch])
+		updateMatchScore(idx, mc[indexMatch-1])
+	case 2:
+		updateMatchDate(idx, mc[indexMatch-1])
+	case 3:
+		updateMatchKDA(idx, mc[indexMatch-1])
+	}
+
+	if pick != 4 {
+		updateMatch(idx)
 	}
 }
 
@@ -572,8 +817,9 @@ func deleteTeamWait(idx int, action *string) {
 }
 
 func deleteTeam() {
-	var index, i int
-	var action string
+	var i, j, k, l int
+	var index, indexOpponent int
+	var action, newId string
 	var nNewMatches int
 	var newMatches tabMatches
 	var team Team
@@ -608,6 +854,35 @@ func deleteTeam() {
 			if matches[i].tHomeId != team.id && matches[i].tAwayId != team.id {
 				newMatches[nNewMatches] = matches[i]
 				nNewMatches++
+			} else {
+				if matches[i].pHome > matches[i].pAway {
+					if matches[i].tHomeId == team.id {
+						indexOpponent = getIndexTeamFromId(matches[i].tAwayId)
+						teams[indexOpponent].lose--
+					} else {
+						indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
+						teams[indexOpponent].win--
+					}
+				} else if matches[i].pHome < matches[i].pAway {
+					if matches[i].tAwayId == team.id {
+						indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
+						teams[indexOpponent].lose--
+					} else {
+						indexOpponent = getIndexTeamFromId(matches[i].tAwayId)
+						teams[indexOpponent].win--
+					}
+				}
+				for j = 0; j < 5; j++ {
+					if teams[indexOpponent].id == matches[i].tHomeId {
+						teams[indexOpponent].members[j].totalKill -= matches[i].mHomeStats[i].kill
+						teams[indexOpponent].members[j].totalDeath -= matches[i].mHomeStats[i].death
+						teams[indexOpponent].members[j].totalAssist -= matches[i].mHomeStats[i].assist
+					} else {
+						teams[indexOpponent].members[j].totalKill -= matches[i].mAwayStats[i].kill
+						teams[indexOpponent].members[j].totalDeath -= matches[i].mAwayStats[i].death
+						teams[indexOpponent].members[j].totalAssist -= matches[i].mAwayStats[i].assist
+					}
+				}
 			}
 		}
 		matches = newMatches
@@ -615,6 +890,35 @@ func deleteTeam() {
 
 		for i = index; i < nTeams; i++ {
 			teams[i] = teams[i+1]
+			newId = fmt.Sprintf("TE%d", i+1)
+
+			for j = 0; j < nMatches; j++ {
+				if teams[i].id == matches[j].tHomeId {
+					matches[j].tHomeId = newId
+
+					for k = 0; k < 5; k++ {
+						for l = 0; l < 5; l++ {
+							if teams[i].members[k].id == matches[j].mHomeStats[k].id {
+								teams[i].members[k].id = fmt.Sprintf("%s-ME%d", newId, k+1)
+								matches[j].mHomeStats[k].id = teams[i].members[k].id
+							}
+						}
+					}
+				}
+				if teams[i].id == matches[j].tAwayId {
+					matches[j].tAwayId = newId
+
+					for k = 0; k < 5; k++ {
+						for l = 0; l < 5; l++ {
+							if teams[i].members[k].id == matches[j].mAwayStats[k].id {
+								teams[i].members[k].id = fmt.Sprintf("%s-ME%d", newId, k+1)
+								matches[j].mAwayStats[k].id = teams[i].members[k].id
+							}
+						}
+					}
+				}
+			}
+			teams[i].id = newId
 		}
 		nTeams--
 	}
