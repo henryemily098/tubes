@@ -50,12 +50,19 @@ func getIndexTeamFromName(name string) int {
 }
 
 func getIndexTeamFromId(id string) int {
-	var i, idx int
-
+	var idx, left, mid, right int
 	idx = -1
-	for i = 0; i < nTeams && idx < 0; i++ {
-		if teams[i].id == id {
-			idx = i
+	left = 0
+	right = nTeams - 1
+
+	for left <= right && idx < 0 {
+		mid = (left + right) / 2
+		if id < teams[mid].id {
+			right = mid - 1
+		} else if id > teams[mid].id {
+			left = mid + 1
+		} else {
+			idx = mid
 		}
 	}
 
@@ -171,26 +178,6 @@ func createTeam() {
 
 // Opsi 2
 
-func selectTeam(idx *int) {
-	var name string
-	fmt.Println("Daftar Tim Dalam Turnamen")
-	showStandingTable()
-
-	Print("Tim mana yang hendak anda perbarui (ketik '0' untuk kembali): ", false)
-	fmt.Scan(&name)
-
-	if name != "0" {
-		*idx = getIndexTeamFromName(name)
-		clearTerminal()
-		if *idx == -1 {
-			Print("Tim yang hendak anda cari tidak ditemukan!", true)
-			selectTeam(*&idx)
-		}
-	} else {
-		*idx = -2
-	}
-}
-
 func selectUpdateOptions(idx int) {
 	var pick int
 	Print(fmt.Sprintf("(%s) Apa yang hendak anda perbarui?", teams[idx].name), true)
@@ -209,7 +196,7 @@ func selectUpdateOptions(idx int) {
 			updateTeamName(idx)
 		case 2:
 			if nTeams == 1 {
-				Print("Anda tidak memperbarui jadwal pertandingan jika hanya ada 1 tim dalam turnamen!", true)
+				Print("Anda tidak dapat memperbarui jadwal pertandingan jika hanya ada 1 tim dalam turnamen!", true)
 			} else {
 				selectUpdateMatchOptions(idx)
 			}
@@ -249,15 +236,19 @@ func updateTeamName(idx int) {
 	}
 }
 
-func addMatchDate(idx int, month, date, year *int) {
-	months := [12]string{"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+func addMatchDate(idx, indexOpponent int, month, date, year *int) {
+	var i int
+	var months [12]string
+	var isAlready bool
+
+	months = [12]string{"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 	Print("Tentukan tanggal (format: bulan tanggal tahun): ", false)
-	fmt.Scan(*&month, *&date, *&year)
+	fmt.Scan(month, date, year)
 
 	clearTerminal()
 	if *month < 1 || *month > 12 {
 		Print("Anda memasukkan bulan yang tidak valid!", true)
-		addMatchDate(idx, *&month, *&date, *&year)
+		addMatchDate(idx, indexOpponent, month, date, year)
 		return
 	}
 
@@ -265,12 +256,14 @@ func addMatchDate(idx int, month, date, year *int) {
 	case 1, 3, 5, 7, 8, 10, 12:
 		if *date < 1 || *date > 31 {
 			Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 31 untuk bulan %s!", months[*month-1]), true)
-			addMatchDate(idx, *&month, *&date, *&year)
+			addMatchDate(idx, indexOpponent, month, date, year)
+			return
 		}
 	case 4, 6, 9, 11:
 		if *date < 1 || *date > 30 {
 			Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 30 untuk bulan %s!", months[*month-1]), true)
-			addMatchDate(idx, *&month, *&date, *&year)
+			addMatchDate(idx, indexOpponent, month, date, year)
+			return
 		}
 	case 2:
 		if *date < 1 || ((*date > 28 && *year%4 != 0) || (*date > 29 && *year%4 == 0)) {
@@ -279,18 +272,42 @@ func addMatchDate(idx int, month, date, year *int) {
 			} else {
 				Print(fmt.Sprintf("Anda hanya dapat memasukkan tanggal antara 1 hingga 28 untuk bulan %s!", months[*month-1]), true)
 			}
-			addMatchDate(idx, *&month, *&date, *&year)
+			addMatchDate(idx, indexOpponent, month, date, year)
+			return
 		}
+	}
+
+	isAlready = false
+	for i = 0; i < nMatches && !isAlready; i++ {
+		if ((matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[indexOpponent].id) || (matches[i].tHomeId == teams[indexOpponent].id && matches[i].tAwayId == teams[idx].id)) && matches[i].month == *month && matches[i].date == *date && matches[i].year == *year {
+			isAlready = true
+		}
+	}
+
+	if isAlready {
+		Print(
+			fmt.Sprintf(
+				"Sudah terdapat sebuah pertandingan pada tanggal %d %s %d untuk tim %s dan %s!",
+				*date,
+				months[*month],
+				*year,
+				teams[idx].name,
+				teams[indexOpponent].name,
+			),
+			true,
+		)
+		addMatchDate(idx, indexOpponent, month, date, year)
+		return
 	}
 }
 
 func addMatch(idx int) {
-	var i, j, k int
+	var i, j, k, indexOpponent int
 	var totalMatches, pick int
 	var date, month, year int
 	var t tabTeams
 
-	Print("Daftar tim yang dapat menjadi lawan (maksimal pertemuan sebanyak 4x):", true)
+	Print("Daftar tim yang dapat menjadi lawan (maksimal pertemuan dengan tim yang sama sebanyak 4x):", true)
 	for i = 0; i < nTeams; i++ {
 		if teams[idx].id != teams[i].id {
 			for j = 0; j < nMatches; j++ {
@@ -315,26 +332,32 @@ func addMatch(idx int) {
 		return
 	}
 
+	indexOpponent = -1
+	for i = 0; i < nTeams && indexOpponent < 0; i++ {
+		if t[pick-1].id == teams[i].id {
+			indexOpponent = i
+		}
+	}
 	for i = 0; i < nMatches; i++ {
-		if (matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == t[pick-1].id) || (matches[i].tHomeId == t[pick-1].id && matches[i].tAwayId == teams[idx].id) {
+		if (matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[indexOpponent].id) || (matches[i].tHomeId == teams[indexOpponent].id && matches[i].tAwayId == teams[idx].id) {
 			totalMatches++
 		}
 	}
 	if totalMatches >= 4 {
 		clearTerminal()
-		Print(teams[idx].name+" sudah berhadapan dengan "+t[pick-1].name+" sebanyak 4x, yang mana ini adalah jumlah maksimal!", true)
+		Print(teams[idx].name+" sudah berhadapan dengan "+teams[indexOpponent].name+" sebanyak 4x, yang mana ini adalah jumlah maksimal!", true)
 		addMatch(idx)
 		return
 	}
 
 	matches[nMatches].tHomeId = teams[idx].id
-	matches[nMatches].tAwayId = t[pick-1].id
+	matches[nMatches].tAwayId = teams[indexOpponent].id
 	for i = 0; i < 5; i++ {
 		matches[nMatches].mHomeStats[i].id = teams[idx].members[i].id
-		matches[nMatches].mAwayStats[i].id = t[pick-1].members[i].id
+		matches[nMatches].mAwayStats[i].id = teams[indexOpponent].members[i].id
 	}
 	clearTerminal()
-	addMatchDate(idx, &month, &date, &year)
+	addMatchDate(idx, indexOpponent, &month, &date, &year)
 	matches[nMatches].month = month
 	matches[nMatches].date = date
 	matches[nMatches].year = year
@@ -342,8 +365,9 @@ func addMatch(idx int) {
 	clearTerminal()
 }
 
-func pickMatch(idx int, pick, nMc *int, mc *tabMatches) {
+func pickMatch(idx int, pick *int, mc *tabMatches) {
 	var i, index int
+	var nMc int
 
 	index = -1
 	fmt.Println("Daftar Pertandingan", teams[idx].name)
@@ -364,8 +388,8 @@ func pickMatch(idx int, pick, nMc *int, mc *tabMatches) {
 				fmt.Print("\n")
 			}
 
-			mc[*nMc] = matches[i]
-			*nMc++
+			mc[nMc] = matches[i]
+			nMc++
 		}
 		index = -1
 	}
@@ -374,11 +398,11 @@ func pickMatch(idx int, pick, nMc *int, mc *tabMatches) {
 	Print("Pilih pertandingan yang hendak anda perbarui (ketik '0' jika hendak kembali): ", false)
 	fmt.Scan(pick)
 
-	if *pick < 0 || *pick > *nMc {
+	if *pick < 0 || *pick > nMc {
 		clearTerminal()
 		Print("Anda memilih pertandingan yang tidak valid!", true)
 		fmt.Println()
-		pickMatch(idx, pick, nMc, mc)
+		pickMatch(idx, pick, mc)
 	}
 }
 
@@ -398,11 +422,53 @@ func pickMethod(idx int, pick *int) {
 	}
 }
 
+func updateMatchScore(idx int, match Match) {
+	var i int
+	var index, indexMatch int
+	var score int
+
+	if teams[idx].id == match.tHomeId {
+		index = getIndexTeamFromId(match.tAwayId)
+	}
+	if teams[idx].id == match.tAwayId {
+		index = getIndexTeamFromId(match.tHomeId)
+	}
+
+	indexMatch = -1
+	for i = 0; i < nMatches && indexMatch < 0; i++ {
+		if match.tHomeId == matches[i].tHomeId && match.tAwayId == matches[i].tAwayId && match.date == matches[i].date && match.month == matches[i].month && match.year == matches[i].year {
+			indexMatch = i
+		}
+	}
+
+	Print(fmt.Sprintf("Tentukan skor untuk %s (Range skor 0 - 2. Jika skor-nya 1 atau 0, %s akan secara otomatis mendapatkan 2 poin): ", teams[idx].name, teams[index].name), false)
+	fmt.Scan(&score)
+
+	if score < 0 || score > 2 {
+		clearTerminal()
+		Print("Skor yang kamu masukkan tidak valid!", true)
+		updateMatchScore(idx, match)
+		return
+	}
+
+	if score < 2 {
+		if teams[idx].id == matches[indexMatch].tHomeId {
+			matches[indexMatch].pHome = score
+			matches[indexMatch].pAway = 2
+		} else if teams[idx].id == matches[indexMatch].tAwayId {
+			matches[indexMatch].pAway = score
+			matches[indexMatch].pHome = 2
+		}
+	} else {
+
+	}
+}
+
 func updateMatch(idx int) {
-	var indexMatch, nMc, pick int
+	var indexMatch, pick int
 	var mc tabMatches
 
-	pickMatch(idx, &indexMatch, &nMc, &mc)
+	pickMatch(idx, &indexMatch, &mc)
 	clearTerminal()
 	if indexMatch == 0 {
 		return
@@ -412,6 +478,11 @@ func updateMatch(idx int) {
 	if pick == 4 {
 		updateMatch(idx)
 		return
+	}
+
+	switch pick {
+	case 1:
+		updateMatchScore(idx, mc[indexMatch])
 	}
 }
 
@@ -457,6 +528,26 @@ func selectUpdateMatchOptions(idx int) {
 	}
 	if pick != 4 {
 		selectUpdateMatchOptions(idx)
+	}
+}
+
+func selectTeam(idx *int) {
+	var name string
+	fmt.Println("Daftar Tim Dalam Turnamen")
+	showStandingTable()
+
+	Print("Tim mana yang hendak anda perbarui (ketik '0' untuk kembali): ", false)
+	fmt.Scan(&name)
+
+	if name != "0" {
+		*idx = getIndexTeamFromName(name)
+		clearTerminal()
+		if *idx == -1 {
+			Print("Tim yang hendak anda cari tidak ditemukan!", true)
+			selectTeam(*&idx)
+		}
+	} else {
+		*idx = -2
 	}
 }
 
