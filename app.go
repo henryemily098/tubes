@@ -22,10 +22,10 @@ type Team struct {
 }
 
 type Match struct {
-	date, month, year      int
-	tHomeId, tAwayId       string // Team ID
-	pHome, pAway           int    // Team Point
-	mHomeStats, mAwayStats [5]MemberStats
+	date, month, year      int            // Date of the match occured
+	tHomeId, tAwayId       string         // Team ID
+	pHome, pAway           int            // Team Point
+	mHomeStats, mAwayStats [5]MemberStats // Statistics of Members each teams
 }
 
 type tabTeams [nTeamMAX]Team
@@ -167,9 +167,6 @@ func createTeam() {
 
 	teams[nTeams] = team
 	nTeams++
-
-	clearTerminal()
-	mainMenu()
 }
 
 // Opsi 2
@@ -345,31 +342,87 @@ func addMatch(idx int) {
 	clearTerminal()
 }
 
-func selectUpdateMatchOptions(idx int) {
-	var index, pick int
-	var i int
+func pickMatch(idx int, pick, nMc *int, mc *tabMatches) {
+	var i, index int
 
-	if nMatches != 0 {
-		fmt.Println("Daftar Pertandingan", teams[idx].name)
-		for i = 0; i < nMatches; i++ {
-			if matches[i].tHomeId == teams[idx].id {
-				index = getIndexTeamFromId(matches[i].tAwayId)
-			}
-			if matches[i].tAwayId == teams[idx].id {
-				index = getIndexTeamFromId(matches[i].tHomeId)
-			}
-
-			if (matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[index].id) || (matches[i].tHomeId == teams[index].id && matches[i].tAwayId == teams[idx].id) {
-				fmt.Printf("%s (%d) vs (%d) %s - ", teams[idx].name, matches[i].pHome, matches[i].pAway, teams[index].name)
-				fmt.Printf("%d/%d/%d", matches[i].date, matches[i].month, matches[i].year)
-				if matches[i].pHome == matches[i].pAway {
-					fmt.Print(" (Belum)\n")
-				} else {
-					fmt.Print("\n")
-				}
-			}
+	index = -1
+	fmt.Println("Daftar Pertandingan", teams[idx].name)
+	for i = 0; i < nMatches; i++ {
+		if matches[i].tHomeId == teams[idx].id {
+			index = getIndexTeamFromId(matches[i].tAwayId)
 		}
+		if matches[i].tAwayId == teams[idx].id {
+			index = getIndexTeamFromId(matches[i].tHomeId)
+		}
+
+		if index >= 0 && ((matches[i].tHomeId == teams[idx].id && matches[i].tAwayId == teams[index].id) || (matches[i].tHomeId == teams[index].id && matches[i].tAwayId == teams[idx].id)) {
+			fmt.Printf("1). %s (%d) vs (%d) %s - ", teams[idx].name, matches[i].pHome, matches[i].pAway, teams[index].name)
+			fmt.Printf("%d/%d/%d", matches[i].date, matches[i].month, matches[i].year)
+			if matches[i].pHome == matches[i].pAway {
+				fmt.Print(" (Belum)\n")
+			} else {
+				fmt.Print("\n")
+			}
+
+			mc[*nMc] = matches[i]
+			*nMc++
+		}
+		index = -1
+	}
+	fmt.Println()
+
+	Print("Pilih pertandingan yang hendak anda perbarui (ketik '0' jika hendak kembali): ", false)
+	fmt.Scan(pick)
+
+	if *pick < 0 || *pick > *nMc {
+		clearTerminal()
+		Print("Anda memilih pertandingan yang tidak valid!", true)
 		fmt.Println()
+		pickMatch(idx, pick, nMc, mc)
+	}
+}
+
+func pickMethod(idx int, pick *int) {
+	Print("Apa yang hendak perbarui:", true)
+	Print("1). Skor", true)
+	Print("2). Tanggal pertandingan", true)
+	Print("3). KDA pemain", true)
+	Print("4). Kembali", true)
+	Print("Pilih: ", false)
+	fmt.Scan(pick)
+
+	if *pick < 1 || *pick > 4 {
+		clearTerminal()
+		Print("Pilihan anda tidak valid!", true)
+		pickMethod(idx, pick)
+	}
+}
+
+func updateMatch(idx int) {
+	var indexMatch, nMc, pick int
+	var mc tabMatches
+
+	pickMatch(idx, &indexMatch, &nMc, &mc)
+	clearTerminal()
+	if indexMatch == 0 {
+		return
+	}
+
+	pickMethod(idx, &pick)
+	if pick == 4 {
+		updateMatch(idx)
+		return
+	}
+}
+
+func selectUpdateMatchOptions(idx int) {
+	var pick, i int
+	var totalMatches int
+
+	for i = 0; i < nMatches; i++ {
+		if matches[i].tHomeId == teams[idx].id || matches[i].tAwayId == teams[idx].id {
+			totalMatches++
+		}
 	}
 
 	Print(fmt.Sprintf("(%s) Pilih salah-satu opsi di bawah ini:", teams[idx].name), true)
@@ -378,15 +431,28 @@ func selectUpdateMatchOptions(idx int) {
 	Print("3). Hapus Pertandingan", true)
 	Print("4). Kembali", true)
 	Print("Pilih: ", false)
-	fmt.Scan(&pick)
 
+	fmt.Scan(&pick)
 	clearTerminal()
+
 	if pick < 1 || pick > 4 {
 		Print("Kamu memilih pilihan di luar opsi!", true)
 	} else {
 		switch pick {
 		case 1:
 			addMatch(idx)
+		case 2:
+			if totalMatches == 0 {
+				Print(teams[idx].name+" tidak mempunyai jadwal pertandingan apapun untuk diperbarui!", true)
+			} else {
+				updateMatch(idx)
+			}
+		case 3:
+			if totalMatches == 0 {
+				Print(teams[idx].name+" tidak mempunyai jadwal pertandingan apapun untuk diperbarui!", true)
+			} else {
+
+			}
 		}
 	}
 	if pick != 4 {
@@ -402,8 +468,68 @@ func updateTeam() {
 	if index != -2 {
 		selectUpdateOptions(index)
 		updateTeam()
-	} else {
-		mainMenu()
+	}
+}
+
+// Opsi 3
+
+func deleteTeamWait(idx int, action *string) {
+	Print("Apakah anda yakin hendak menghapus "+teams[idx].name+"?", true)
+	Print("Seluruh pertandingan yang melibatkan "+teams[idx].name+" akan ikut terhapus pula!", true)
+	Print("Ketik 'ya' jika yakin hendak menghapus, ketik yang lain jika tidak jadi: ", false)
+	fmt.Scan(action)
+}
+
+func deleteTeam() {
+	var index, i int
+	var action string
+	var nNewMatches int
+	var newMatches tabMatches
+	var team Team
+
+	fmt.Println("Daftar Tim-Tim dalam Turnamen")
+	for i = 0; i < nTeams; i++ {
+		fmt.Printf("%d). %s\n", i+1, teams[i].name)
+	}
+	fmt.Println()
+
+	Print("Tim mana yang hendak anda hapus (ketik '0' jika anda hendak meng-cancel proses): ", false)
+	fmt.Scan(&index)
+
+	clearTerminal()
+	if index < 0 || index > nTeams {
+		Print("Anda memilih tim yang tidak ada di dalam turnamen!", true)
+		fmt.Println()
+		deleteTeam()
+		return
+	}
+	if index == 0 {
+		return
+	}
+
+	index--
+	team = teams[index]
+	deleteTeamWait(index, &action)
+	clearTerminal()
+
+	if action == "ya" || action == "Ya" || action == "yA" || action == "YA" {
+		for i = 0; i < nMatches; i++ {
+			if matches[i].tHomeId != team.id && matches[i].tAwayId != team.id {
+				newMatches[nNewMatches] = matches[i]
+				nNewMatches++
+			}
+		}
+		matches = newMatches
+		nMatches = nNewMatches
+
+		for i = index; i < nTeams; i++ {
+			teams[i] = teams[i+1]
+		}
+		nTeams--
+	}
+
+	if nTeams > 0 {
+		deleteTeam()
 	}
 }
 
@@ -477,9 +603,6 @@ func viewStanding() {
 		Print("Belum ada tim dalam klasemen, ketik apapun untuk melanjutkan: ", false)
 		fmt.Scan(&pick)
 	}
-
-	clearTerminal()
-	mainMenu()
 }
 
 // Main Menu
@@ -529,8 +652,15 @@ func mainMenu() {
 		createTeam()
 	case 2:
 		updateTeam()
+	case 3:
+		deleteTeam()
 	case 4:
 		viewStanding()
+	}
+
+	clearTerminal()
+	if selection != 5 {
+		mainMenu()
 	}
 }
 
