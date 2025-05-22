@@ -605,7 +605,7 @@ func updateMatchKDA(idx int, match Match) {
 		}
 	}
 
-	Print("KDA (Kill, Death ,Assist) pemain-pemain dari tim mana yang hendak ada perbarui?", true)
+	Print("KDA (Kill, Death, Assist) pemain-pemain dari tim mana yang hendak ada perbarui?", true)
 	if teams[idx].id == match.tHomeId {
 		indexOpponent = getIndexTeamFromId(match.tAwayId)
 		Print("1). "+teams[idx].name, true)
@@ -679,6 +679,7 @@ func updateMatchKDA(idx int, match Match) {
 		}
 	}
 
+	clearTerminal()
 	if pick != 0 {
 		updateMatchKDA(idx, match)
 	}
@@ -963,31 +964,33 @@ func deleteTeam() {
 				nNewMatches++
 			} else {
 				if matches[i].pHome > matches[i].pAway {
-					if matches[i].tHomeId == team.id {
+					switch team.id {
+					case matches[i].tHomeId:
 						indexOpponent = getIndexTeamFromId(matches[i].tAwayId)
 						teams[indexOpponent].lose--
-					} else {
+					case matches[i].tAwayId:
 						indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
 						teams[indexOpponent].win--
 					}
 				} else if matches[i].pHome < matches[i].pAway {
-					if matches[i].tAwayId == team.id {
-						indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
-						teams[indexOpponent].lose--
-					} else {
+					switch team.id {
+					case matches[i].tHomeId:
 						indexOpponent = getIndexTeamFromId(matches[i].tAwayId)
 						teams[indexOpponent].win--
+					case matches[i].tAwayId:
+						indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
+						teams[indexOpponent].lose--
 					}
 				}
 				for j = 0; j < 5; j++ {
 					if teams[indexOpponent].id == matches[i].tHomeId {
-						teams[indexOpponent].members[j].totalKill -= matches[i].mHomeStats[i].kill
-						teams[indexOpponent].members[j].totalDeath -= matches[i].mHomeStats[i].death
-						teams[indexOpponent].members[j].totalAssist -= matches[i].mHomeStats[i].assist
+						teams[indexOpponent].members[j].totalKill -= matches[i].mHomeStats[j].kill
+						teams[indexOpponent].members[j].totalDeath -= matches[i].mHomeStats[j].death
+						teams[indexOpponent].members[j].totalAssist -= matches[i].mHomeStats[j].assist
 					} else {
-						teams[indexOpponent].members[j].totalKill -= matches[i].mAwayStats[i].kill
-						teams[indexOpponent].members[j].totalDeath -= matches[i].mAwayStats[i].death
-						teams[indexOpponent].members[j].totalAssist -= matches[i].mAwayStats[i].assist
+						teams[indexOpponent].members[j].totalKill -= matches[i].mAwayStats[j].kill
+						teams[indexOpponent].members[j].totalDeath -= matches[i].mAwayStats[j].death
+						teams[indexOpponent].members[j].totalAssist -= matches[i].mAwayStats[j].assist
 					}
 				}
 			}
@@ -1088,9 +1091,13 @@ func viewStandingDetails() {
 }
 
 func viewStanding() {
+	var teamName string
 	var pick string
-	var i, j int
-	var members [5 * 20]Member
+	var i, j, k int
+
+	var players [5 * 20]Member
+	var tempPlayer Member
+	var nPlayers int
 
 	fmt.Println("Klasemen Turnamen")
 	showStandingTable()
@@ -1098,6 +1105,54 @@ func viewStanding() {
 	if nTeams != 0 {
 
 		// Tabel pemain terbaik
+
+		for i = 0; i < nTeams; i++ {
+			for j = 0; j < 5; j++ {
+				players[nPlayers] = teams[i].members[j]
+				nPlayers++
+			}
+		}
+
+		for i = 1; i < nPlayers; i++ {
+			tempPlayer = players[i]
+			for j = i; j > 0 && (tempPlayer.totalKill*3+tempPlayer.totalAssist-tempPlayer.totalDeath) > (players[j-1].totalKill*3+players[j-1].totalAssist-players[j-1].totalDeath); j-- {
+				players[j] = players[j-1]
+			}
+			players[j] = tempPlayer
+		}
+
+		if nPlayers > 5 {
+			nPlayers = 5
+		}
+
+		fmt.Println("=== Top 5 Pemain Dalam Turnamen ===")
+		fmt.Println("🏅Pemain terbaik (MVP):", players[0].name)
+		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
+		fmt.Printf("| %-3s | %-16s | %-15s | %-30s | %-6s | %-6s | %-6s |\n", "Pos", "ID", "Pemain", "Tim", "Kill", "Death", "Assist")
+		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
+		for i = 0; i < nPlayers; i++ {
+			teamName = "-"
+			for j = 0; j < nTeams && teamName == "-"; j++ {
+				for k = 0; k < 5; k++ {
+					if players[i].id == teams[j].members[k].id {
+						teamName = teams[j].name
+					}
+				}
+			}
+
+			fmt.Printf(
+				"| %-3d | %-16s | %-15s | %-30s | %-6d | %-6d | %-6d |\n",
+				i+1,
+				players[i].id,
+				players[i].name,
+				teamName,
+				players[i].totalKill,
+				players[i].totalDeath,
+				players[i].totalAssist,
+			)
+		}
+		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
+		fmt.Println()
 
 		//
 
