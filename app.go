@@ -685,7 +685,7 @@ func updateMatchKDA(idx int, match Match) {
 }
 
 func pickMethod(idx int, pick *int) {
-	Print("Apa yang hendak perbarui:", true)
+	Print(fmt.Sprintf("Apa yang hendak anda perbarui:"), true)
 	Print("1). Skor", true)
 	Print("2). Tanggal pertandingan", true)
 	Print("3). KDA pemain", true)
@@ -731,6 +731,112 @@ func updateMatch(idx int) {
 	}
 }
 
+func deleteMatch(idx int) {
+	var action string
+	var i, indexMatch, indexOpponent, pick int
+	var nMc int
+	var mc tabMatches
+
+	for i = 0; i < nMatches; i++ {
+		if teams[idx].id == matches[i].tHomeId || teams[idx].id == matches[i].tAwayId {
+			Print(fmt.Sprintf("%d). %s ", nMc+1, teams[idx].name), false)
+			if teams[idx].id == matches[i].tHomeId {
+				indexOpponent = getIndexTeamFromId(matches[i].tAwayId)
+				fmt.Printf("(%d) vs (%d) ", matches[i].pHome, matches[i].pAway)
+			} else {
+				indexOpponent = getIndexTeamFromId(matches[i].tHomeId)
+				fmt.Printf("(%d) vs (%d) ", matches[i].pAway, matches[i].pHome)
+			}
+			fmt.Printf("%s - %d/%d/%d\n", teams[indexOpponent].name, matches[i].date, matches[i].month, matches[i].year)
+
+			mc[nMc] = matches[i]
+			nMc++
+		}
+	}
+
+	Print("Pilih (ketik '0' untuk kembali): ", false)
+	fmt.Scan(&pick)
+
+	clearTerminal()
+	if pick < 0 || pick > nMc {
+		Print("Angka yang anda masukan tidak valid!", true)
+		deleteMatch(idx)
+		return
+	}
+
+	if pick == 0 {
+		return
+	}
+
+	Print(fmt.Sprintf("%s ", teams[idx].name), false)
+	if teams[idx].id == mc[pick-1].tHomeId {
+		indexOpponent = getIndexTeamFromId(mc[pick-1].tAwayId)
+		fmt.Printf("(%d) vs (%d) ", mc[pick-1].pHome, mc[pick-1].pAway)
+	}
+	if teams[idx].id == mc[pick-1].tAwayId {
+		indexOpponent = getIndexTeamFromId(mc[pick-1].tHomeId)
+		fmt.Printf("(%d) vs (%d) ", mc[pick-1].pAway, mc[pick-1].pHome)
+	}
+	fmt.Sprintf("%s - %d/%d/%d", teams[indexOpponent].name, mc[pick-1].date, mc[pick-1].month, mc[pick-1].year)
+	Print("Apakah anda yakin hendak menghapus pertandingan ini? Ketik 'ya' untuk menghapus, dan lainnya untuk membatalkan: ", false)
+	fmt.Scan(&action)
+
+	if action == "ya" || action == "yA" || action == "Ya" || action == "YA" {
+		switch teams[idx].id {
+		case mc[pick-1].tHomeId:
+			if mc[pick-1].pHome > mc[pick-1].pAway {
+				teams[idx].win--
+				teams[indexOpponent].lose--
+			} else if mc[pick-1].pHome < mc[pick-1].pAway {
+				teams[idx].lose--
+				teams[indexOpponent].win--
+			}
+		case mc[pick-1].tAwayId:
+			if mc[pick-1].pHome > mc[pick-1].pAway {
+				teams[idx].lose--
+				teams[indexOpponent].win--
+			} else if mc[pick-1].pHome < mc[pick-1].pAway {
+				teams[idx].win--
+				teams[indexOpponent].lose--
+			}
+		}
+		for i = 0; i < 5; i++ {
+			if teams[idx].id == mc[pick-1].tHomeId {
+				teams[idx].members[i].totalKill -= mc[pick-1].mHomeStats[i].kill
+				teams[idx].members[i].totalDeath -= mc[pick-1].mHomeStats[i].death
+				teams[idx].members[i].totalAssist -= mc[pick-1].mHomeStats[i].assist
+
+				teams[indexOpponent].members[i].totalKill -= mc[pick-1].mAwayStats[i].kill
+				teams[indexOpponent].members[i].totalDeath -= mc[pick-1].mAwayStats[i].death
+				teams[indexOpponent].members[i].totalAssist -= mc[pick-1].mAwayStats[i].assist
+			} else {
+				teams[idx].members[i].totalKill -= mc[pick-1].mAwayStats[i].kill
+				teams[idx].members[i].totalDeath -= mc[pick-1].mAwayStats[i].death
+				teams[idx].members[i].totalAssist -= mc[pick-1].mAwayStats[i].assist
+
+				teams[indexOpponent].members[i].totalKill -= mc[pick-1].mHomeStats[i].kill
+				teams[indexOpponent].members[i].totalDeath -= mc[pick-1].mHomeStats[i].death
+				teams[indexOpponent].members[i].totalAssist -= mc[pick-1].mHomeStats[i].assist
+			}
+		}
+
+		for i = 0; i < nMatches; i++ {
+			if mc[pick-1].tHomeId == matches[i].tHomeId && mc[pick-1].tAwayId == matches[i].tAwayId && mc[pick-1].date == matches[i].date && mc[pick-1].month == matches[i].month && mc[pick-1].year == matches[i].year {
+				indexMatch = i
+			}
+		}
+
+		for i = indexMatch; i < nMatches; i++ {
+			matches[i] = matches[i+1]
+		}
+		nMatches--
+	}
+
+	if nMatches != 0 {
+		deleteMatch(idx)
+	}
+}
+
 func selectUpdateMatchOptions(idx int) {
 	var pick, i int
 	var totalMatches int
@@ -765,9 +871,9 @@ func selectUpdateMatchOptions(idx int) {
 			}
 		case 3:
 			if totalMatches == 0 {
-				Print(teams[idx].name+" tidak mempunyai jadwal pertandingan apapun untuk diperbarui!", true)
+				Print(teams[idx].name+" tidak mempunyai jadwal pertandingan apapun untuk dihapus!", true)
 			} else {
-
+				deleteMatch(idx)
 			}
 		}
 	}
