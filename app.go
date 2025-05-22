@@ -1089,9 +1089,18 @@ func viewStandingDetails() {
 
 func viewStanding() {
 	var pick string
+	var i, j int
+	var members [5 * 20]Member
+
 	fmt.Println("Klasemen Turnamen")
 	showStandingTable()
+
 	if nTeams != 0 {
+
+		// Tabel pemain terbaik
+
+		//
+
 		Print("Apakah anda hendak melihat statistik tim lebih detail (ketik 'ya' untuk melihat, dan selain itu untuk kembali ke menu utama): ", false)
 		fmt.Scan(&pick)
 
