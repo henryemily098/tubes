@@ -1171,28 +1171,90 @@ func viewStanding() {
 	}
 }
 
+// Opsi 5
+
+func isEarlier(tempMatch, incomingMatch Match) bool {
+	return (tempMatch.year < incomingMatch.year) || (tempMatch.year == incomingMatch.year && tempMatch.month < incomingMatch.month) || (tempMatch.year == incomingMatch.year && tempMatch.month == incomingMatch.month && tempMatch.date < incomingMatch.date)
+}
+
+func viewStandingSchedule() {
+	var i, j int
+	var random string
+	var indexHome, indexAway int
+	var months [12]string
+
+	months = [12]string{"Januari", "Febuari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+
+	var incomingMatches [nMatchesMAX]Match
+	var tempMatch Match
+	var nMc int
+
+	for i = 0; i < nMatches; i++ {
+		if matches[i].pHome == 0 && matches[i].pAway == 0 {
+			incomingMatches[nMc] = matches[i]
+			nMc++
+		}
+	}
+
+	for i = 1; i < nMc; i++ {
+		tempMatch = incomingMatches[i]
+		for j = i; j > 0 && isEarlier(tempMatch, incomingMatches[j-1]); j-- {
+			incomingMatches[j] = incomingMatches[j-1]
+		}
+		incomingMatches[j] = tempMatch
+	}
+
+	if nMc > 5 {
+		nMc = 5
+	}
+
+	fmt.Printf("Daftar %d jadwal pertandingan terdekat!\n", nMc)
+	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	fmt.Printf("| %-30s | %-30s | %-20s |\n", "Tim Home", "Tim Away", "Tanggal")
+	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	for i = 0; i < nMc; i++ {
+		indexHome = getIndexTeamFromId(incomingMatches[i].tHomeId)
+		indexAway = getIndexTeamFromId(incomingMatches[i].tAwayId)
+		fmt.Printf(
+			"| %-30s | %-30s | %-20s |\n",
+			teams[indexHome].name,
+			teams[indexAway].name,
+			fmt.Sprintf("%d %s %d", incomingMatches[i].date, months[incomingMatches[i].month-1], incomingMatches[i].year),
+		)
+	}
+	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	fmt.Println()
+
+	Print("Ketik apapun untuk melanjutkan: ", false)
+	fmt.Scan(&random)
+	clearTerminal()
+}
+
 // Main Menu
 
 func mainMenu() {
 	var selection int
+	var isBlocked bool
+
 	Print(fmt.Sprintf("Saat ini anda memiliki %d dari %d slot tim dalam klasemen!", nTeams, nTeamMAX-nTeams), true)
 	Print("Silakan pilih salah-satu opsi yang hendak anda lakukan:", true)
 	Print("1). Tambah Tim", true)
 	Print("2). Perbarui Tim", true)
 	Print("3). Hapus Tim", true)
 	Print("4). Lihat Klasemen", true)
-	Print("5). Keluar", true)
+	Print("5). Lihat Jadwal Pertandingan", true)
+	Print("6). Keluar", true)
 	Print("Pilihan anda: ", false)
 	fmt.Scan(&selection)
 
 	clearTerminal()
-	if selection < 1 || selection > 5 {
+	isBlocked = false
+	if selection < 1 || selection > 6 {
 		Print("-----------------------------------------------", true)
 		Print("Warning‼️", true)
 		Print(fmt.Sprintf("Tidak ada opsi %d dalam pilihan!", selection), true)
 		Print("-----------------------------------------------", true)
-		mainMenu()
-		return
+		isBlocked = true
 	}
 
 	if nTeams == 0 && (selection == 2 || selection == 3) {
@@ -1200,28 +1262,30 @@ func mainMenu() {
 		Print("Warning‼️", true)
 		Print("Opsi 2 dan 3 belum tersedia jika belum ada tim yang terdaftar!", true)
 		Print("-----------------------------------------------", true)
-		mainMenu()
-		return
+		isBlocked = true
 	}
 
 	if nTeams == nTeamMAX && selection == 1 {
 		Print("-----------------------------------------------", true)
 		Print("Warning‼️", true)
-		Print("Kamu sudah tidak memiliki slot dalam klasemen untuk menambahkan tim!", true)
+		Print("Anda sudah tidak memiliki slot dalam klasemen untuk menambahkan tim!", true)
 		Print("-----------------------------------------------", true)
-		mainMenu()
-		return
+		isBlocked = true
 	}
 
-	switch selection {
-	case 1:
-		createTeam()
-	case 2:
-		updateTeam()
-	case 3:
-		deleteTeam()
-	case 4:
-		viewStanding()
+	if !isBlocked {
+		switch selection {
+		case 1:
+			createTeam()
+		case 2:
+			updateTeam()
+		case 3:
+			deleteTeam()
+		case 4:
+			viewStanding()
+		case 5:
+			viewStandingSchedule()
+		}
 	}
 
 	clearTerminal()
