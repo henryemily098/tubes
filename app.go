@@ -777,10 +777,11 @@ func deleteMatch(idx int) {
 		indexOpponent = getIndexTeamFromId(mc[pick-1].tHomeId)
 		fmt.Printf("(%d) vs (%d) ", mc[pick-1].pAway, mc[pick-1].pHome)
 	}
-	fmt.Sprintf("%s - %d/%d/%d", teams[indexOpponent].name, mc[pick-1].date, mc[pick-1].month, mc[pick-1].year)
+	fmt.Printf("%s - %d/%d/%d\n", teams[indexOpponent].name, mc[pick-1].date, mc[pick-1].month, mc[pick-1].year)
 	Print("Apakah anda yakin hendak menghapus pertandingan ini? Ketik 'ya' untuk menghapus, dan lainnya untuk membatalkan: ", false)
 	fmt.Scan(&action)
 
+	clearTerminal()
 	if action == "ya" || action == "yA" || action == "Ya" || action == "YA" {
 		switch teams[idx].id {
 		case mc[pick-1].tHomeId:
