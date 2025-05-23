@@ -638,58 +638,54 @@ func updateMatchKDA(idx int, match Match) {
 		updateMatchKDA(idx, match)
 		return
 	}
+	if pick == 0 {
+		return
+	}
 
 	switch pick {
 	case 1:
-		Print("Ubahlah KDA pemain ", false)
 		if teams[idx].id == match.tHomeId {
-			fmt.Print(teams[idx].name, " (format: kill death assist)!\n")
 			pickIndex = idx
 		} else {
-			fmt.Print(teams[indexOpponent].name, " (format: kill death assist)!\n")
 			pickIndex = indexOpponent
-		}
-		for i = 0; i < 5; i++ {
-			teams[pickIndex].members[i].totalKill -= match.mHomeStats[i].kill
-			teams[pickIndex].members[i].totalDeath -= match.mHomeStats[i].death
-			teams[pickIndex].members[i].totalAssist -= match.mHomeStats[i].assist
-
-			Print(fmt.Sprintf("%s: ", teams[pickIndex].members[i].name), false)
-			fmt.Scan(&kill, &death, &assist)
-
-			matches[indexMatch].mAwayStats[i].kill = kill
-			matches[indexMatch].mAwayStats[i].death = death
-			matches[indexMatch].mAwayStats[i].assist = assist
-
-			teams[pickIndex].members[i].totalKill += kill
-			teams[pickIndex].members[i].totalDeath += death
-			teams[pickIndex].members[i].totalAssist += assist
 		}
 	case 2:
-		Print("Ubahlah KDA pemain ", false)
-		if teams[idx].id == match.tAwayId {
-			fmt.Print(teams[idx].name, " (format: kill death assist)!\n")
-			pickIndex = idx
-		} else {
-			fmt.Print(teams[indexOpponent].name, " (format: kill death assist)!\n")
+		if teams[idx].id == match.tHomeId {
 			pickIndex = indexOpponent
+		} else {
+			pickIndex = idx
 		}
-		for i = 0; i < 5; i++ {
-			teams[pickIndex].members[i].totalKill -= match.mAwayStats[i].kill
-			teams[pickIndex].members[i].totalDeath -= match.mAwayStats[i].death
-			teams[pickIndex].members[i].totalAssist -= match.mAwayStats[i].assist
+	}
 
-			Print(fmt.Sprintf("%s: ", teams[pickIndex].members[i].name), false)
-			fmt.Scan(&kill, &death, &assist)
+	var isHome bool = teams[pickIndex].id == match.tHomeId
+	var stats [5]MemberStats
+	if isHome {
+		stats = matches[indexMatch].mHomeStats
+	} else {
+		stats = matches[indexMatch].mAwayStats
+	}
 
+	for i = 0; i < 5; i++ {
+		teams[pickIndex].members[i].totalKill -= stats[i].kill
+		teams[pickIndex].members[i].totalDeath -= stats[i].death
+		teams[pickIndex].members[i].totalAssist -= stats[i].assist
+
+		Print(fmt.Sprintf("%s: ", teams[pickIndex].members[i].name), false)
+		fmt.Scan(&kill, &death, &assist)
+
+		if isHome {
+			matches[indexMatch].mHomeStats[i].kill = kill
+			matches[indexMatch].mHomeStats[i].death = death
+			matches[indexMatch].mHomeStats[i].assist = assist
+		} else {
 			matches[indexMatch].mAwayStats[i].kill = kill
 			matches[indexMatch].mAwayStats[i].death = death
 			matches[indexMatch].mAwayStats[i].assist = assist
-
-			teams[pickIndex].members[i].totalKill += kill
-			teams[pickIndex].members[i].totalDeath += death
-			teams[pickIndex].members[i].totalAssist += assist
 		}
+
+		teams[pickIndex].members[i].totalKill += kill
+		teams[pickIndex].members[i].totalDeath += death
+		teams[pickIndex].members[i].totalAssist += assist
 	}
 
 	clearTerminal()
@@ -816,7 +812,8 @@ func deleteMatch(idx int) {
 			}
 		}
 		for i = 0; i < 5; i++ {
-			if teams[idx].id == mc[pick-1].tHomeId {
+			switch teams[idx].id {
+			case mc[pick-1].tHomeId:
 				teams[idx].members[i].totalKill -= mc[pick-1].mHomeStats[i].kill
 				teams[idx].members[i].totalDeath -= mc[pick-1].mHomeStats[i].death
 				teams[idx].members[i].totalAssist -= mc[pick-1].mHomeStats[i].assist
@@ -824,7 +821,7 @@ func deleteMatch(idx int) {
 				teams[indexOpponent].members[i].totalKill -= mc[pick-1].mAwayStats[i].kill
 				teams[indexOpponent].members[i].totalDeath -= mc[pick-1].mAwayStats[i].death
 				teams[indexOpponent].members[i].totalAssist -= mc[pick-1].mAwayStats[i].assist
-			} else {
+			case mc[pick-1].tAwayId:
 				teams[idx].members[i].totalKill -= mc[pick-1].mAwayStats[i].kill
 				teams[idx].members[i].totalDeath -= mc[pick-1].mAwayStats[i].death
 				teams[idx].members[i].totalAssist -= mc[pick-1].mAwayStats[i].assist
@@ -902,7 +899,7 @@ func selectTeam(idx *int) {
 	fmt.Println("Daftar Tim Dalam Turnamen")
 	showStandingTable()
 
-	Print("Tim mana yang hendak anda perbarui (ketik '0' untuk kembali): ", false)
+	Print("Tim mana yang hendak anda perbarui (Masukan nama atau ketik '0' untuk kembali): ", false)
 	fmt.Scan(&name)
 
 	if name != "0" {
@@ -996,11 +993,12 @@ func deleteTeam() {
 					}
 				}
 				for j = 0; j < 5; j++ {
-					if teams[indexOpponent].id == matches[i].tHomeId {
+					switch teams[indexOpponent].id {
+					case matches[i].tHomeId:
 						teams[indexOpponent].members[j].totalKill -= matches[i].mHomeStats[j].kill
 						teams[indexOpponent].members[j].totalDeath -= matches[i].mHomeStats[j].death
 						teams[indexOpponent].members[j].totalAssist -= matches[i].mHomeStats[j].assist
-					} else {
+					case matches[i].tAwayId:
 						teams[indexOpponent].members[j].totalKill -= matches[i].mAwayStats[j].kill
 						teams[indexOpponent].members[j].totalDeath -= matches[i].mAwayStats[j].death
 						teams[indexOpponent].members[j].totalAssist -= matches[i].mAwayStats[j].assist
@@ -1142,10 +1140,6 @@ func viewStanding() {
 			players[j] = tempPlayer
 		}
 
-		if nPlayers > 5 {
-			nPlayers = 5
-		}
-
 		fmt.Println("=== Top 5 Pemain Dalam Turnamen ===")
 		if sort == 1 {
 			fmt.Println("🏅Pemain terbaik (MVP):", players[nPlayers-1].name)
@@ -1155,6 +1149,10 @@ func viewStanding() {
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
 		fmt.Printf("| %-3s | %-16s | %-15s | %-30s | %-6s | %-6s | %-6s |\n", "Pos", "ID", "Pemain", "Tim", "Kill", "Death", "Assist")
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
+
+		if nPlayers > 5 {
+			nPlayers = 5
+		}
 		for i = 0; i < nPlayers; i++ {
 			teamName = "-"
 			for j = 0; j < nTeams && teamName == "-"; j++ {
@@ -1261,12 +1259,13 @@ func viewStandingSchedule() {
 			)
 		}
 		fmt.Println("+--------------------------------+--------------------------------+----------------------+-------+")
+		fmt.Println()
 	}
 
 	// Pertandingan yang belum
 	fmt.Printf("Daftar %d jadwal pertandingan terdekat dan belum terjadi!\n", nMc)
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
-	fmt.Printf("| %-30s | %-30s | %-20s | %-5s |\n", "Tim Home", "Tim Away", "Tanggal")
+	fmt.Printf("| %-30s | %-30s | %-20s |\n", "Tim Home", "Tim Away", "Tanggal")
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
 	for i = 0; i < nMc; i++ {
 		indexHome = getIndexTeamFromId(incomingMatches[i].tHomeId)
@@ -1281,7 +1280,7 @@ func viewStandingSchedule() {
 	if nMc != 0 {
 		fmt.Println("+--------------------------------+--------------------------------+----------------------+")
 	} else {
-		fmt.Println("Tidak terdapat jadwal apapun karena anda belum membuat pertandingan!")
+		fmt.Println("Tidak terdapat jadwal pertandingan terdekat!")
 	}
 	fmt.Println()
 
@@ -1377,6 +1376,7 @@ func main() {
 	// 1 = ASC
 	// 2 = DESC
 	sort = 2
+	clearTerminal()
 	Print("Selamat datang di Turnamen anda!", true)
 	mainMenu()
 }
