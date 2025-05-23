@@ -1114,7 +1114,7 @@ func viewStandingDetails() {
 func viewStanding() {
 	var teamName string
 	var pick string
-	var i, j, k, indexBestPlayer int
+	var i, j, k int
 
 	var players [5 * 20]Member
 	var tempPlayer Member
@@ -1142,19 +1142,16 @@ func viewStanding() {
 			players[j] = tempPlayer
 		}
 
-		indexBestPlayer = 0
-		for i = 1; i < nPlayers; i++ {
-			if players[indexBestPlayer].totalKill*3+players[indexBestPlayer].totalAssist-players[indexBestPlayer].totalDeath < players[i].totalKill*3+players[i].totalAssist-players[i].totalDeath {
-				indexBestPlayer = i
-			}
-		}
-
 		if nPlayers > 5 {
 			nPlayers = 5
 		}
 
 		fmt.Println("=== Top 5 Pemain Dalam Turnamen ===")
-		fmt.Println("🏅Pemain terbaik (MVP):", players[indexBestPlayer].name)
+		if sort == 1 {
+			fmt.Println("🏅Pemain terbaik (MVP):", players[nPlayers-1].name)
+		} else if sort == 2 {
+			fmt.Println("🏅Pemain terbaik (MVP):", players[0].name)
+		}
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
 		fmt.Printf("| %-3s | %-16s | %-15s | %-30s | %-6s | %-6s | %-6s |\n", "Pos", "ID", "Pemain", "Tim", "Kill", "Death", "Assist")
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
@@ -1212,17 +1209,28 @@ func viewStandingSchedule() {
 	var months [12]string
 	months = [12]string{"Januari", "Febuari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 
+	var results [nMatchesMAX]Match
 	var incomingMatches [nMatchesMAX]Match
 	var tempMatch Match
-	var nMc int
+	var nMc, nResults int
 
 	for i = 0; i < nMatches; i++ {
 		if matches[i].pHome == 0 && matches[i].pAway == 0 {
 			incomingMatches[nMc] = matches[i]
 			nMc++
+		} else {
+			results[nResults] = matches[i]
+			nResults++
 		}
 	}
 
+	for i = 1; i < nResults; i++ {
+		tempMatch = results[i]
+		for j = i; j > 0 && isEarlier(tempMatch, results[j-1]); j-- {
+			results[j] = results[j-1]
+		}
+		results[j] = tempMatch
+	}
 	for i = 1; i < nMc; i++ {
 		tempMatch = incomingMatches[i]
 		for j = i; j > 0 && isEarlier(tempMatch, incomingMatches[j-1]); j-- {
@@ -1235,9 +1243,30 @@ func viewStandingSchedule() {
 		nMc = 5
 	}
 
+	if nResults > 0 {
+		// Pertandingan yang sudah selesai
+		fmt.Println("Hasil Pertandingan")
+		fmt.Println("+--------------------------------+--------------------------------+----------------------+-------+")
+		fmt.Printf("| %-30s | %-30s | %-20s | %-5s |\n", "Tim Home", "Tim Away", "Tanggal", "Hasil")
+		fmt.Println("+--------------------------------+--------------------------------+----------------------+-------+")
+		for i = 0; i < nResults; i++ {
+			indexHome = getIndexTeamFromId(results[i].tHomeId)
+			indexAway = getIndexTeamFromId(results[i].tAwayId)
+			fmt.Printf(
+				"| %-30s | %-30s | %-20s | %-5s |\n",
+				teams[indexHome].name,
+				teams[indexAway].name,
+				fmt.Sprintf("%d %s %d", results[i].date, months[results[i].month-1], results[i].year),
+				fmt.Sprintf("%d - %d", results[i].pHome, results[i].pAway),
+			)
+		}
+		fmt.Println("+--------------------------------+--------------------------------+----------------------+-------+")
+	}
+
+	// Pertandingan yang belum
 	fmt.Printf("Daftar %d jadwal pertandingan terdekat dan belum terjadi!\n", nMc)
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
-	fmt.Printf("| %-30s | %-30s | %-20s |\n", "Tim Home", "Tim Away", "Tanggal")
+	fmt.Printf("| %-30s | %-30s | %-20s | %-5s |\n", "Tim Home", "Tim Away", "Tanggal")
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
 	for i = 0; i < nMc; i++ {
 		indexHome = getIndexTeamFromId(incomingMatches[i].tHomeId)
@@ -1251,6 +1280,8 @@ func viewStandingSchedule() {
 	}
 	if nMc != 0 {
 		fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	} else {
+		fmt.Println("Tidak terdapat jadwal apapun karena anda belum membuat pertandingan!")
 	}
 	fmt.Println()
 
@@ -1287,7 +1318,7 @@ func mainMenu() {
 	Print("2). Perbarui Tim", true)
 	Print("3). Hapus Tim", true)
 	Print("4). Lihat Klasemen Dan 5 Pemain Teratas/Terbawah", true)
-	Print("5). Lihat Jadwal Pertandingan", true)
+	Print("5). Lihat Hasil Dan Jadwal Pertandingan Terdekat", true)
 	Print("6). Atur Urutan Tim Terbaik dan Pemain Terbaik", true)
 	Print("7). Keluar", true)
 	Print("Pilihan anda: ", false)
