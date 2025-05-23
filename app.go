@@ -1222,7 +1222,9 @@ func viewStandingSchedule() {
 			fmt.Sprintf("%d %s %d", incomingMatches[i].date, months[incomingMatches[i].month-1], incomingMatches[i].year),
 		)
 	}
-	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	if nMc != 0 {
+		fmt.Println("+--------------------------------+--------------------------------+----------------------+")
+	}
 	fmt.Println()
 
 	Print("Ketik apapun untuk melanjutkan: ", false)
