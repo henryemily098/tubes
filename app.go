@@ -1208,7 +1208,7 @@ func viewStandingSchedule() {
 		nMc = 5
 	}
 
-	fmt.Printf("Daftar %d jadwal pertandingan terdekat!\n", nMc)
+	fmt.Printf("Daftar %d jadwal pertandingan terdekat dan belum terjadi!\n", nMc)
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
 	fmt.Printf("| %-30s | %-30s | %-20s |\n", "Tim Home", "Tim Away", "Tanggal")
 	fmt.Println("+--------------------------------+--------------------------------+----------------------+")
