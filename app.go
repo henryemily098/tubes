@@ -35,6 +35,7 @@ var teams tabTeams
 var matches tabMatches
 var nTeams int
 var nMatches int
+var sort int
 
 func getIndexTeamFromName(name string) int {
 	var i, idx int
@@ -80,8 +81,14 @@ func showStandingTable() {
 		idx = pass - 1
 		i = pass
 		for i < nTeams {
-			if (t[idx].win - t[idx].lose) < (t[i].win - t[i].lose) {
-				idx = i
+			if sort == 1 {
+				if (t[idx].win - t[idx].lose) > (t[i].win - t[i].lose) {
+					idx = i
+				}
+			} else {
+				if (t[idx].win - t[idx].lose) < (t[i].win - t[i].lose) {
+					idx = i
+				}
 			}
 			i++
 		}
@@ -128,7 +135,11 @@ func createTeamName(team *Team) {
 	Print("Buatlah nama untuk tim yang sedang dibuat (ketik '0' untuk jika anda hendak meng-cancel proses): ", false)
 	fmt.Scan(&name)
 
-	if len(name) < 2 && len(name) > 30 {
+	if name == "0" {
+		team.name = name
+		return
+	}
+	if len(name) < 2 || len(name) > 30 {
 		clearTerminal()
 		Print("Nama tim tidak boleh kurang dari 2 dan lebih dari 30 karakter!", true)
 		createTeamName(*&team)
@@ -171,10 +182,11 @@ func createTeamMembers(team *Team) {
 func createTeam() {
 	var team Team
 	createTeamName(&team)
-	createTeamMembers(&team)
-
-	teams[nTeams] = team
-	nTeams++
+	if team.name != "0" {
+		createTeamMembers(&team)
+		teams[nTeams] = team
+		nTeams++
+	}
 }
 
 // Opsi 2
@@ -1041,6 +1053,14 @@ func deleteTeam() {
 
 // Opsi 4
 
+func sortPlayers(tempPlayer, player Member) bool {
+	if sort == 1 {
+		return (tempPlayer.totalKill*3 + tempPlayer.totalAssist - tempPlayer.totalDeath) < (player.totalKill*3 + player.totalAssist - player.totalDeath)
+	} else {
+		return (tempPlayer.totalKill*3 + tempPlayer.totalAssist - tempPlayer.totalDeath) > (player.totalKill*3 + player.totalAssist - player.totalDeath)
+	}
+}
+
 func viewStandingDetails() {
 	var name string
 	var pick string
@@ -1067,7 +1087,7 @@ func viewStandingDetails() {
 		idx = pass - 1
 		i = pass
 		for i < 5 {
-			if (members[idx].totalKill*3 + members[idx].totalAssist - members[idx].totalDeath) < (members[i].totalKill*3 + members[i].totalAssist - members[i].totalDeath) {
+			if sortPlayers(members[idx], members[i]) {
 				idx = i
 			}
 			i++
@@ -1094,7 +1114,7 @@ func viewStandingDetails() {
 func viewStanding() {
 	var teamName string
 	var pick string
-	var i, j, k int
+	var i, j, k, indexBestPlayer int
 
 	var players [5 * 20]Member
 	var tempPlayer Member
@@ -1116,10 +1136,17 @@ func viewStanding() {
 
 		for i = 1; i < nPlayers; i++ {
 			tempPlayer = players[i]
-			for j = i; j > 0 && (tempPlayer.totalKill*3+tempPlayer.totalAssist-tempPlayer.totalDeath) > (players[j-1].totalKill*3+players[j-1].totalAssist-players[j-1].totalDeath); j-- {
+			for j = i; j > 0 && sortPlayers(tempPlayer, players[j-1]); j-- {
 				players[j] = players[j-1]
 			}
 			players[j] = tempPlayer
+		}
+
+		indexBestPlayer = 0
+		for i = 1; i < nPlayers; i++ {
+			if players[indexBestPlayer].totalKill*3+players[indexBestPlayer].totalAssist-players[indexBestPlayer].totalDeath < players[i].totalKill*3+players[i].totalAssist-players[i].totalDeath {
+				indexBestPlayer = i
+			}
 		}
 
 		if nPlayers > 5 {
@@ -1127,7 +1154,7 @@ func viewStanding() {
 		}
 
 		fmt.Println("=== Top 5 Pemain Dalam Turnamen ===")
-		fmt.Println("🏅Pemain terbaik (MVP):", players[0].name)
+		fmt.Println("🏅Pemain terbaik (MVP):", players[indexBestPlayer].name)
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
 		fmt.Printf("| %-3s | %-16s | %-15s | %-30s | %-6s | %-6s | %-6s |\n", "Pos", "ID", "Pemain", "Tim", "Kill", "Death", "Assist")
 		fmt.Println("+-----+------------------+-----------------+--------------------------------+--------+--------+--------+")
@@ -1232,6 +1259,22 @@ func viewStandingSchedule() {
 	clearTerminal()
 }
 
+// Opsi 6
+
+func setSortSystem() {
+	Print("Anda mau melihat klasemen dari yang paling bawah atau paling atas?", true)
+	Print("1). Dari bawah ke atas", true)
+	Print("2). Dari atas ke bawah", true)
+	Print("Pilih: ", false)
+	fmt.Scan(&sort)
+
+	if sort != 1 && sort != 2 {
+		clearTerminal()
+		Print("Anda memasukkan angka yang tidak valid!", true)
+		setSortSystem()
+	}
+}
+
 // Main Menu
 
 func mainMenu() {
@@ -1245,13 +1288,14 @@ func mainMenu() {
 	Print("3). Hapus Tim", true)
 	Print("4). Lihat Klasemen", true)
 	Print("5). Lihat Jadwal Pertandingan", true)
-	Print("6). Keluar", true)
+	Print("6). Atur urutan tim terbaik dan pemain terbaik", true)
+	Print("7). Keluar", true)
 	Print("Pilihan anda: ", false)
 	fmt.Scan(&selection)
 
 	clearTerminal()
 	isBlocked = false
-	if selection < 1 || selection > 6 {
+	if selection < 1 || selection > 7 {
 		Print("-----------------------------------------------", true)
 		Print("Warning‼️", true)
 		Print(fmt.Sprintf("Tidak ada opsi %d dalam pilihan!", selection), true)
@@ -1287,16 +1331,21 @@ func mainMenu() {
 			viewStanding()
 		case 5:
 			viewStandingSchedule()
+		case 6:
+			setSortSystem()
 		}
 	}
 
 	clearTerminal()
-	if selection != 5 {
+	if selection != 7 {
 		mainMenu()
 	}
 }
 
 func main() {
+	// 1 = ASC
+	// 2 = DESC
+	sort = 2
 	Print("Selamat datang di Turnamen anda!", true)
 	mainMenu()
 }
