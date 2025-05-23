@@ -124,7 +124,8 @@ func createTeamName(team *Team) {
 	var isDuplicate bool
 	var i int
 
-	Print("Buatlah nama untuk tim yang sedang dibuat: ", false)
+	Print("Peringatan! Jika anda memasukkan nama tim, maka anda tidak dapat meng-cancel proses!", true)
+	Print("Buatlah nama untuk tim yang sedang dibuat (ketik '0' untuk jika anda hendak meng-cancel proses): ", false)
 	fmt.Scan(&name)
 
 	if len(name) < 2 && len(name) > 30 {
@@ -1182,7 +1183,6 @@ func viewStandingSchedule() {
 	var random string
 	var indexHome, indexAway int
 	var months [12]string
-
 	months = [12]string{"Januari", "Febuari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 
 	var incomingMatches [nMatchesMAX]Match
